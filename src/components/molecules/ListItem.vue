@@ -44,21 +44,44 @@ export default {
       }
     },
     enlargement: {
-      type: Promise,
+      type: Object,
       default () {
-        return Promise.resolve(ipoint(0, 0));
+        return {};
       }
     }
   },
 
   data () {
     return {
-      height: `${10 + rand()}em`,
-      size: point()
+      height: `${20 + rand()}em`,
+      size: point(),
+      history: new Map()
+      // offset: ipoint()
     };
   },
 
   watch: {
+    enlargement: {
+      handler (options) {
+        if (this.history.has(options.index.toString())) {
+          const sizeDiff = this.history.get(options.index.toString());
+          this.sizeDiff.calc(() => +sizeDiff);
+          console.log('YAPP', options.index.toString(), this.sizeDiff.toString());
+          options.resolve(this.sizeDiff);
+        } else {
+          setTimeout(() => {
+            this.height = `${20 + (options.index % 10)}em`;
+            this.$el.querySelector('.content').style.height = this.height;
+            this.size.x = this.$el.scrollWidth / this.$el.clientWidth;
+            this.size.y = this.$el.scrollHeight / this.$el.clientHeight;
+            this.sizeDiff.calc(() => this.size - ipoint(1, 1));
+            this.history.set(options.index.toString(), this.sizeDiff);
+            console.log('Huch', options.index.toString(), this.sizeDiff.toString());
+            options.resolve(this.sizeDiff);
+          }, rand() * 10);
+        }
+      }
+    },
     index: {
       handler () {
         console.log('ACG');
@@ -68,10 +91,7 @@ export default {
 
   mounted () {
     this.$el.position = this.position;
-    // this.$el.querySelector('.content').style.height = this.height;
-    this.size.x = this.$el.scrollWidth / this.$el.clientWidth;
-    this.size.y = this.$el.scrollHeight / this.$el.clientHeight;
-    this.sizeDiff.calc(() => this.size - ipoint(1, 1));
+
     this.$emit('mounted', this.$el);
   },
 
@@ -113,7 +133,7 @@ div.item {
 
   /* align-items: center;
   justify-content: center; */
-  width: 300px;
+  width: 900px;
   height: 10em;
   transform: translateX(var(--x)) translateY(var(--y));
 

@@ -26,10 +26,10 @@
   knobs="{
     toggle: { default: boolean('toggle', false) },
     mirror: { default: boolean('mirror direction', false) },
-    slots: { default: number('number of slots', 3) }, // slots
+    slots: { default: number('number of slots', 1) }, // slots
     items: { default: number('number of items per slot', 10) } // items
   }">
-  <infinite-scroll :mirror="mirror" :scroll-horizontal="Boolean(true)" :toggle="toggle" :slots="slots" :items="items">
+  <infinite-scroll :mirror="mirror" :scroll-horizontal="Boolean(false)" :toggle="toggle" :slots="slots" :items="items">
     <template lang="html" v-slot:item="props">
       <div class="item">
         <div class="content">
@@ -49,6 +49,7 @@ import IntersectionObservable from '@/classes/intersection/Observable';
 import IntersectionItemList from '@/classes/intersection/ItemList';
 import ListItem from '@/components/molecules/ListItem';
 import { getElementRect } from '@/utils/element';
+// import ContentfulAPI from '@/classes/result';
 
 IPoint.prototype.toCSSVars = function (name = 'ipoint') {
   return {
@@ -128,6 +129,13 @@ export default {
   },
 
   mounted () {
+    // const test = new ContentfulAPI();
+    // test.subscribe((result) => {
+    //   console.log(result);
+    // });
+    // test.next('A');
+    // test.next('B');
+    // test.next('C');
     this.observable = new IntersectionObservable(this.elements, {
       root: this.root,
       rootMargin: `${-50 * Number(!this.scrollHorizontal)}% ${-50 * Number(this.scrollHorizontal)}%`
@@ -160,8 +168,10 @@ export default {
       return ipoint(Number(this.scrollHorizontal), Number(!this.scrollHorizontal));
     },
 
-    enable () {
-      this.list.setup();
+    async enable () {
+      const result = await this.list.setup();
+      // this.$forceUpdate();
+      console.log(result);
       this.subscription = this.observable.subscribe((entry) => {
         if (entry.isIntersecting) {
           const pos = ipoint(entry.target.position);

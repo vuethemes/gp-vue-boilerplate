@@ -9,16 +9,25 @@ export default class ItemList {
     this.total = total;
   }
 
-  setup () {
-    this.matrix.reduce((offsetGlobal, slot) => {
-      return slot.map((item, index) => {
-        item.offset = offsetGlobal[Number(index)] || ipoint();
-        return ipoint(() => item.sizeDiff + item.offset);
-      });
-    }, []);
+  async setup () {
+    const globalOffset = new Array(this.max[this.axis.static]).fill(null).map(() => ipoint());
+    this.matrix = await this.matrix.reduce(async (promise, scroll) => {
+      const result = await promise;
+      result.push(await Promise.all(
+        scroll.map(async (item, index) => {
+          item.offset = globalOffset[Number(index)];
+          item.size = new Promise((resolve) => { item.enlargement = { resolve, index: item.index }; });
+          const size = await item.size;
+          globalOffset[Number(index)] = ipoint(() => size + globalOffset[Number(index)]);
+          return item;
+        })
+      ));
+      return result;
+    }, Promise.resolve([]));
+    return this.matrix;
   }
 
-  update (index) {
+  async update (index) {
     const centeredItem = this.getItem(index);
     let accumulatedSlotOffsets = [
       ipoint(() => centeredItem.offset + centeredItem.sizeDiff),
@@ -28,28 +37,38 @@ export default class ItemList {
     const availableRange = ipoint(() => Math.floor((this.max) / 2) * this.direction);
     for (let item = 0; item <= availableRange[this.axis.scroll]; item++) {
       const bidirectionalOffset = ipoint({ [this.axis.scroll]: item, [this.axis.static]: 0 });
-      accumulatedSlotOffsets = this.updateBidirectional(centeredItem, bidirectionalOffset, accumulatedSlotOffsets);
+      accumulatedSlotOffsets = await this.updateBidirectional(centeredItem, bidirectionalOffset, accumulatedSlotOffsets);
+      // console.log('V', accumulatedSlotOffsets);
     }
   }
 
-  updateBidirectional (centeredItem, bidirectionalOffset, accumulatedSlotOffsets) {
-    return accumulatedSlotOffsets.map((accumulatedSlotOffset, i) => {
+  async updateBidirectional (centeredItem, bidirectionalOffset, accumulatedSlotOffsets) {
+    const test = await accumulatedSlotOffsets.reduce(async (promise, accumulatedSlotOffset, i) => {
+      const result = await promise;
       const direction = i * 2 - 1;
       const offset = ipoint(() => bidirectionalOffset * direction);
       const position = ipoint(() => centeredItem.position + offset);
       const index = ipoint(() => centeredItem.index + offset);
-      return this.updateItem(index, position, accumulatedSlotOffset, direction);
-    });
+      result.push(this.updateItem(index, position, accumulatedSlotOffset, direction));
+      return result;
+    }, Promise.resolve([]));
+    // console.log('A', test);
+    return Promise.all(test);
   }
 
-  updateItem (index, position, accumulatedSlotOffset, direction) {
+  async updateItem (index, position, accumulatedSlotOffset, direction) {
     const item = this.getItem(index);
-    const size = ipoint(() => item.sizeDiff * direction);
+    // const size = ipoint(() => item.sizeDiff * direction);
+    const itemSize = await item.size;
+    let size = ipoint(() => itemSize * direction);
+    // console.log('B', accumulatedSlotOffset);
 
     if (!index.equals(item.index) && isInRange(index, this.total)) {
-      const xtraOffset = ipoint(() => Math.floor(position / this.max) * this.max);
-      item.offset = calcItemOffset(direction, accumulatedSlotOffset, xtraOffset, size);
       item.index = index;
+      const xtraOffset = ipoint(() => Math.floor(position / this.max) * this.max);
+      item.size = new Promise((resolve) => { item.enlargement = { resolve, index }; });
+      size = await item.size;
+      item.offset = calcItemOffset(direction, accumulatedSlotOffset, xtraOffset, size);
     }
     return ipoint(() => accumulatedSlotOffset + size);
   }
@@ -85,5 +104,6 @@ function getMatrix (max, axis) {
 }
 
 function isInRange (indexOfItem, total) {
-  return indexOfItem.x >= 0 && indexOfItem.x < total.x && indexOfItem.y >= 0 && indexOfItem.y < total.y;
+  // return indexOfItem.x >= 0 && indexOfItem.x < total.x && indexOfItem.y >= 0 && indexOfItem.y < total.y;
+  return indexOfItem.x >= 0 && indexOfItem.y >= 0;
 }

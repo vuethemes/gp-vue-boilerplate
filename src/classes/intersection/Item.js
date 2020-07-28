@@ -6,5 +6,6 @@ export default class Item {
     this.index = position;
     this.offset = ipoint();
     this.sizeDiff = point();
+    this.enlargement = {};
   }
 }
