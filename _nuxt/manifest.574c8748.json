@@ -1,0 +1,11 @@
+{
+  "name": "Sample MANIFEST",
+  "short_name": "Sample",
+  "description": "Grabarz & Partner Boilerplate",
+  "icons": [],
+  "start_url": "/gp-vue-boilerplate/?standalone=true",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "black",
+  "lang": "de"
+}
